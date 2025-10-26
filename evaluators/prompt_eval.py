@@ -1,5 +1,8 @@
+import json
 from typing import Dict, Any
 import pandas as pd
+
+from utils import validate_required_columns
 from .base import BaseEvaluator
 
 class PromptBasedEvaluator(BaseEvaluator):
@@ -7,9 +10,11 @@ class PromptBasedEvaluator(BaseEvaluator):
     Beklenen kolonlar:
       - score_1_10 (1..10)
     """
-    required_cols = ["score"]
+  #  required_cols = ["score"]
 
-    def compute(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def compute(self, meta,df: pd.DataFrame,output_json_path:str):
+
+     #   validate_required_columns(df,required_cols)
 
         s = pd.to_numeric(df["score"], errors="coerce").dropna()
         if len(s) == 0:
@@ -26,15 +31,22 @@ class PromptBasedEvaluator(BaseEvaluator):
             "percentiles": {"p25": round(p25, 6), "p50": round(p50, 6), "p75": round(p75, 6)},
         }
 
-        if "category" in df.columns and len(s) > 0:
-            grp = df.dropna(subset=["score_1_10"]).groupby("category")["score_1_10"].mean().reset_index()
-            out["per_category"] = [
-                {
-                    "category": str(c),
-                    "count": int((df["category"] == c).sum()),
-                    "avg": round(float(a), 6),
-                }
-                for c, a in zip(grp["category"], grp["score_1_10"])
-            ]
+        result: Dict[str, Any] = {
+            "metadata": meta,
+            "out": out,
+        }
+        json_string = json.dumps(result, ensure_ascii=False, indent=4)
+        try:
+            with open(output_json_path, 'w', encoding='utf-8') as f:
+            # Okunabilirliği artırmak için 'indent=4' kullanılması önerilir.
+            # ensure_ascii=False, Türkçe/özel karakterlerin düzgün kaydedilmesini sağlar.
+                f.write(json_string)
+                print(f"saved: {output_json_path}")
+        
+        except IOError as e:
+            print(f"Error ({output_json_path}): {e}")
 
-        return out
+        return json_string
+
+
+

@@ -3,6 +3,7 @@ import pandas as pd
 import re
 from .base import BaseJudge  
 from utils import *
+
 class PromptBasedJudge(BaseJudge):
 
     def check_single_answer(self, model_answer: str, eval_prompt: str):
@@ -72,7 +73,7 @@ Be concise, consistent, and neutral. Follow the requested format strictly.
         return score, reasoning
 
 
-    def check_answers(self, meta: dict[str, Any], df: pd.DataFrame, output_csv_path: str,eval_prompt:str):
+    def check_answers(self, meta: dict[str, Any], df: pd.DataFrame,output_csv_path:str, eval_prompt:str):
         """
         Evaluate each row in a CSV file using the LLM model.
         Requires columns: ['model_answer', 'prompt'].
@@ -95,12 +96,12 @@ Be concise, consistent, and neutral. Follow the requested format strictly.
         df["score"] = [r[0] for r in results]
         df["reasoning"] = [r[1] for r in results]
 
-        df.to_csv(output_csv_path, index=False)
-        print(f"✅ Prompt-based evaluation saved to: {output_csv_path}")
+
 
         meta["judge"]={"judge_model":self._model_name(),
                      "eval_prompt":eval_prompt}
         
 
-
+        results_df = pd.DataFrame(df)
+        results_df.to_csv(output_csv_path, index=False)
         return meta,df

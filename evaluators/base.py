@@ -4,12 +4,10 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 class BaseEvaluator(ABC):
-    """Tüm evaluator stratejileri için temel arayüz."""
-    required_cols: List[str] = []
+
 
 
 
     @abstractmethod
-    def compute(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """Alt sınıflar metrik hesaplayıp dict döndürmeli."""
-        ...
+    def compute(self, meta:dict[str, Any] ,df: pd.DataFrame,output_json_path:str) :
+        pass

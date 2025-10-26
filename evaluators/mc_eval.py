@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, List, Optional
@@ -60,7 +61,7 @@ class MultipleChoiceEvaluator:
       }
     """
 
-    def compute(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def compute(self,meta, df: pd.DataFrame,output_json_path:str):
 
         if df.empty:
             return {"count": 0, "accuracy": 0.0}
@@ -122,4 +123,22 @@ class MultipleChoiceEvaluator:
             if col in df.columns:
                 df.drop(columns=[col], inplace=True, errors="ignore")
 
-        return out
+        
+        result: Dict[str, Any] = {
+            "metadata": meta,
+            "out": out,
+        }
+                
+                
+        json_string = json.dumps(result, ensure_ascii=False, indent=4)
+        try:
+            with open(output_json_path, 'w', encoding='utf-8') as f:
+            # Okunabilirliği artırmak için 'indent=4' kullanılması önerilir.
+            # ensure_ascii=False, Türkçe/özel karakterlerin düzgün kaydedilmesini sağlar.
+                f.write(json_string)
+                print(f"saved: {output_json_path}")
+        
+        except IOError as e:
+            print(f"Error ({output_json_path}): {e}")
+
+        return json_string

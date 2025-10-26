@@ -6,12 +6,41 @@ from model import Model
 from judges import *
 import pandas as pd
 from task import *
+from evaluators import *
+
+def run_evaluation(task:Task,judge_model,meta,df,eval_prompt: Optional[str] = None):
+    if (task.type==TaskType.MULTIPLE_CHOICE):
+        judge=MultipleChoiceJudge()
+        filename=f"judge_{task.id}.csv"        
+        meta,df= judge.check_answers(meta,df,task.get_path(filename))
+        eval=MultipleChoiceEvaluator()
+        filename=f"eval_{task.id}.json"
+        out=eval.compute(meta,df,task.get_path(filename))
+        return out
+    if (task.type==TaskType.STRING_BASED):
+        judge=StringBasedJudge(judge_model)
+        filename=f"judge_{task.id}.csv"        
+        meta,df= judge.check_answers(meta,df,task.get_path(filename))
+        eval=StringBasedEvaluator()
+        filename=f"eval_{task.id}.json"
+        out=eval.compute(meta,df,task.get_path(filename))
+        return out
+    if (task.type==TaskType.PROMPT_BASED):
+        judge=PromptBasedJudge(judge_model)
+        filename=f"judge_{task.id}.csv"        
+        meta,df=judge.check_answers(meta,df,task.get_path(filename),eval_prompt)
+        eval=PromptBasedEvaluator()
+        filename=f"eval_{task.id}.json"  
+        out=eval.compute(meta,df,task.get_path(filename))
+        return out
+
+
+
 
 
 
 def main():
     print("hi")
-
 
 
 if __name__ == "__main__":

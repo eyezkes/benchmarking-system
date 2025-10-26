@@ -44,7 +44,7 @@ Always stay consistent, neutral, and concise."""
             return 0
 
 
-    def check_answers(self,meta: dict[str, Any], df:pd.DataFrame , output_csv_path: str):
+    def check_answers(self,meta: dict[str, Any], df:pd.DataFrame,output_csv_path ):
         """
         CSV içindeki tüm satırları model ile değerlendirir.
         'model_answer' ve 'true_answer' sütunlarını kullanır.
@@ -61,7 +61,6 @@ Always stay consistent, neutral, and concise."""
         )
 
         df.to_csv(output_csv_path, index=False)
-        print(f"✅ String-based evaluation saved to: {output_csv_path}")
 
         meta["judge"]={"judge_model":self._model_name()}
         
