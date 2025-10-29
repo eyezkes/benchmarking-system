@@ -1,52 +1,55 @@
+# prompt_eval.py
+from __future__ import annotations
 import json
-from typing import Dict, Any
 import pandas as pd
-
-from utils import validate_required_columns
+import logging
+from typing import Any
+from errors import EvaluationError
 from .base import BaseEvaluator
 
+logger = logging.getLogger(__name__)
+
+
 class PromptBasedEvaluator(BaseEvaluator):
-    """
-    Beklenen kolonlar:
-      - score_1_10 (1..10)
-    """
-  #  required_cols = ["score"]
+    """Evaluator for 1–10 LLM-as-a-judge scoring benchmarks."""
 
-    def compute(self, meta,df: pd.DataFrame,output_json_path:str):
+    def compute(
+        self,
+        meta: dict[str, Any],
+        df: pd.DataFrame,
+        output_json_path: str,
+    ) -> dict[str, Any]:
+        """Compute mean, std, and percentiles for LLM-based numeric scores."""
+        if df.empty:
+            raise EvaluationError("Empty dataframe passed to PromptBasedEvaluator.")
 
-     #   validate_required_columns(df,required_cols)
+        if "score" not in df.columns:
+            raise EvaluationError("PromptBasedEvaluator requires a 'score' column.")
 
         s = pd.to_numeric(df["score"], errors="coerce").dropna()
         if len(s) == 0:
-            avg = std = p25 = p50 = p75 = 0.0
+            stats = {"count": 0, "average_score": 0.0, "std_score": 0.0,
+                     "percentiles": {"p25": 0.0, "p50": 0.0, "p75": 0.0}}
         else:
-            avg = float(s.mean())
-            std = float(s.std(ddof=0))  # population std
-            p25, p50, p75 = [float(s.quantile(q)) for q in (0.25, 0.5, 0.75)]
+            stats = {
+                "count": int(len(s)),
+                "average_score": round(float(s.mean()), 6),
+                "std_score": round(float(s.std(ddof=0)), 6),
+                "percentiles": {
+                    "p25": round(float(s.quantile(0.25)), 6),
+                    "p50": round(float(s.quantile(0.5)), 6),
+                    "p75": round(float(s.quantile(0.75)), 6),
+                },
+            }
 
-        out: Dict[str, Any] = {
-            "count": int(len(s)),
-            "average_score": round(avg, 6),
-            "std_score": round(std, 6),
-            "percentiles": {"p25": round(p25, 6), "p50": round(p50, 6), "p75": round(p75, 6)},
-        }
+        result = {"metadata": meta, "out": stats}
 
-        result: Dict[str, Any] = {
-            "metadata": meta,
-            "out": out,
-        }
-        json_string = json.dumps(result, ensure_ascii=False, indent=4)
         try:
-            with open(output_json_path, 'w', encoding='utf-8') as f:
-            # Okunabilirliği artırmak için 'indent=4' kullanılması önerilir.
-            # ensure_ascii=False, Türkçe/özel karakterlerin düzgün kaydedilmesini sağlar.
-                f.write(json_string)
-                print(f"saved: {output_json_path}")
-        
-        except IOError as e:
-            print(f"Error ({output_json_path}): {e}")
+            with open(output_json_path, "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False, indent=4)
+            logger.info("✅ Prompt-based evaluation saved to %s", output_json_path)
+        except OSError as e:
+            logger.error("Failed to save prompt-based evaluation: %s", e)
+            raise EvaluationError(f"Could not save output file: {e}") from e
 
-        return json_string
-
-
-
+        return result
