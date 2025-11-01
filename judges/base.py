@@ -17,12 +17,6 @@ class BaseJudge(ABC):
         """Initialize with an optional LLM model."""
         self.model = model
 
-    def _model_name(self) -> str:
-        """Return the model name or class name if missing."""
-        try:
-            return getattr(self.model, "name", lambda: type(self.model).__name__)()
-        except Exception:
-            return type(self.model).__name__
     @abstractmethod
     def check_single_answer(
         self,

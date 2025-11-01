@@ -41,7 +41,12 @@ class MultipleChoiceJudge(BaseJudge):
             axis=1,
         )
 
-        meta["judge"] = {"judge_model": self._model_name()}
+        meta["judge"] = {
+            "judge_model": None,
+            "model_params":None,
+            "eval_prompt": None,
+        }
+
 
         df.to_csv(output_csv_path, index=False)
         logger.info("✅ MC evaluation complete. Results saved to %s", output_csv_path)

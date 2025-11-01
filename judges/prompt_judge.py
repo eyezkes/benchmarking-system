@@ -15,37 +15,37 @@ logger = logging.getLogger(__name__)
 class PromptBasedJudge(BaseJudge):
 
 
-    def check_single_answer(self, model_answer: str, system_prompt: str) -> tuple[int, str]:
+    def check_single_answer(self, model_answer: str, eval_prompt: str) -> tuple[int, str]:
         """Return (score, reasoning) for how well model_answer fits eval_prompt."""
-        if system_prompt is None:
-            raise EvaluationError("system_prompt cannot be None for PromptBasedJudge.")
+        if eval_prompt is None:
+            raise EvaluationError("eval_prompt cannot be None for PromptBasedJudge.")
         if self.model is None:
             raise EvaluationError("PromptBasedJudge requires a model instance (LLM).")
 
         user_prompt = f"""
-Evaluate how well the model's answer fulfills the system prompt.
+Evaluate how well the following answer satisfies the evaluation criteria.
 
-Prompt:
-{system_prompt}
+Evaluation Prompt (criteria):
+{eval_prompt}
 
 Model's Answer:
 {model_answer}
 
 Scoring Rules:
-- 10 = Perfectly meets the system prompt
-- 7–9 = Mostly meets but has minor issues
-- 4–6 = Partially meets the system prompt
-- 1–3 = Poorly meets or largely incorrect
-- 0 = Completely fails
+- 10 = Perfectly satisfies the evaluation criteria
+- 7–9 = Mostly satisfies with minor issues
+- 4–6 = Partially satisfies the criteria
+- 1–3 = Weakly satisfies or largely off-target
+- 0 = Completely fails to satisfy
 
 Provide your evaluation in this EXACT format:
-Score: [integer between 1 and 10]
+Score: [integer between 0 and 10]
 Reasoning: [brief explanation of your scoring decision]
 """
 
         system_content = (
             "You are an impartial evaluation assistant that scores model answers "
-            "based on how well they satisfy a given prompt. Be concise and neutral."
+            "based on explicit criteria. Be concise, neutral, and consistent."
         )
 
         try:
@@ -61,7 +61,7 @@ Reasoning: [brief explanation of your scoring decision]
         score_match = re.search(r"Score:\s*(\d+)", response_text)
         reasoning_match = re.search(r"Reasoning:\s*(.*)", response_text, re.DOTALL)
 
-        score = None
+        score: int | None = None
         reasoning = ""
 
         if score_match:
@@ -85,9 +85,9 @@ Reasoning: [brief explanation of your scoring decision]
         meta: dict[str, Any],
         df: pd.DataFrame,
         output_csv_path: str,
-        system_prompt: str,
+        eval_prompt: str,
     ) -> tuple[dict[str, Any], pd.DataFrame]:
-        """Evaluate all answers with the same prompt."""
+        """Evaluate all answers with the same eval_prompt."""
         if self.model is None:
             raise EvaluationError("PromptBasedJudge requires a model instance (LLM).")
 
@@ -95,14 +95,17 @@ Reasoning: [brief explanation of your scoring decision]
         validate_required_columns(df, required_cols)
 
         results = df.apply(
-            lambda r: self.check_single_answer(r["model_answer"], system_prompt), axis=1
+            lambda r: self.check_single_answer(r["model_answer"], eval_prompt), axis=1
         )
 
         df["score"] = [r[0] for r in results]
         df["reasoning"] = [r[1] for r in results]
 
+        # enrich meta about judge run
         meta["judge"] = {
-            "judge_model": self._model_name(),
+            "judge_model": self.model.get_name(),
+            "model_params":self.model.get_params(),
+            "eval_prompt": eval_prompt,
         }
 
         df.to_csv(output_csv_path, index=False)

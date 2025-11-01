@@ -1,10 +1,11 @@
+# task.py
 from __future__ import annotations
 
 import datetime as _dt
 import logging
+import uuid
 from enum import StrEnum
 from pathlib import Path
-import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -17,14 +18,16 @@ class TaskType(StrEnum):
 
 
 class Task:
-    """Represents a single benchmark task/run with its own output directory.
+    """
+    Represents the specification of a benchmark task (not the run itself).
 
     Attributes:
-        id: Short string identifier (timestamp + short UUID).
-        type: TaskType of this run (MC / String / Prompt).
-        created_at: Local creation datetime (naive, local time).
-        output_dir: Path to this task's output directory under ./outputs/{id}.
-        system_prompt: (Optional) Custom system prompt for PromptBased tasks.
+        id: Short unique identifier (timestamp + short UUID).
+        type: TaskType of this benchmark.
+        dataset_path: Path to the dataset file.
+        sample_size: Number of samples to take from dataset.
+        seed: Random seed (default 42).
+        system_prompt: (Optional) custom system prompt for PromptBased tasks.
     """
 
     def __init__(
@@ -32,7 +35,11 @@ class Task:
         id: str,
         type: TaskType,
         created_at: _dt.datetime,
-        system_prompt: str | None = None,   # 🔹 NEW
+        dataset_path: str | Path,
+        sample_size: int,
+        eval_prompt:str,
+        seed: int = 42,
+        system_prompt: str | None = None,
     ) -> None:
         if not id or not isinstance(id, str):
             raise ValueError("Task.id must be a non-empty string")
@@ -40,58 +47,58 @@ class Task:
             raise ValueError("Task.type must be a TaskType")
         if not isinstance(created_at, _dt.datetime):
             raise ValueError("Task.created_at must be a datetime")
+        if not dataset_path:
+            raise ValueError("dataset_path must be provided")
+        if not isinstance(sample_size, int) or sample_size <= 0:
+            raise ValueError("sample_size must be a positive integer")
+        if not isinstance(seed, int):
+            raise ValueError("seed must be an integer")
 
         self.id = id
         self.type = type
         self.created_at = created_at
-        self.system_prompt = system_prompt   # 🔹 NEW FIELD
-
-        self.output_dir = Path("outputs") / self.id
-        try:
-            self.output_dir.mkdir(parents=True, exist_ok=True)
-        except Exception as exc:
-            logger.error("Failed to create output directory %s: %s", self.output_dir, exc)
-            raise
+        self.dataset_path = str(dataset_path)
+        self.sample_size = sample_size
+        self.eval_prompt=eval_prompt
+        self.seed = seed
+        self.system_prompt = system_prompt
 
         logger.info(
-            "Created Task(id=%s, type=%s, has_system_prompt=%s) at %s",
+            "Created Task(id=%s, type=%s, dataset=%s, sample=%d, seed=%d, prompt=%s)",
             self.id,
             self.type,
-            bool(self.system_prompt),
-            self.created_at.isoformat(),
+            self.dataset_path,
+            self.sample_size,
+            self.seed,
+            bool(system_prompt),
         )
 
     @staticmethod
-    def new(task_type: TaskType, system_prompt: str | None = None) -> "Task": 
-        """Create a new Task with a local timestamp-based id.
+    def new(
+        task_type: TaskType,
+        dataset_path: str | Path,
+        sample_size: int,
+        eval_prompt: str,
+        system_prompt: str | None = None,
+        seed: int = 42,
 
-        Uses local time (as you preferred) and an 8-char UUID suffix.
-
-        Args:
-            task_type: One of TaskType.
-            system_prompt: Optional custom system prompt for PromptBased tasks.
-
-        Returns:
-            Task: Newly created task instance ready to use.
-        """
+    ) -> "Task":
+        """Create a new Task with timestamp-based id and given dataset/specs."""
         if not isinstance(task_type, TaskType):
             raise ValueError("task_type must be a TaskType")
 
         created = _dt.datetime.now()
-        timestamp_str = created.strftime("%Y%m%d%H%M%S")
+        timestamp = created.strftime("%Y%m%d%H%M%S")
         short_uuid = uuid.uuid4().hex[:8]
-        task_id = f"{timestamp_str}-{short_uuid}"
+        task_id = f"{timestamp}-{short_uuid}"
 
-        return Task(id=task_id, type=task_type, created_at=created, system_prompt=system_prompt)
-
-    def get_path(self, filename: str) -> Path:
-        """Return a full path inside this task's output directory."""
-        if not filename or not isinstance(filename, str):
-            raise ValueError("filename must be a non-empty string")
-        p = Path(filename)
-        if p.is_absolute():
-            raise ValueError("filename must be relative, not absolute")
-
-        full = self.output_dir / p
-        logger.debug("Resolved path for task %s: %s", self.id, full)
-        return full
+        return Task(
+            id=task_id,
+            type=task_type,
+            created_at=created,
+            dataset_path=dataset_path,
+            sample_size=sample_size,
+            eval_prompt=eval_prompt,
+            system_prompt=system_prompt,
+            seed=seed
+        )

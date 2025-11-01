@@ -77,7 +77,11 @@ Answer:"""
             axis=1,
         )
 
-        meta["judge"] = {"judge_model": self._model_name()}
+        meta["judge"] = {
+            "judge_model": self.model.get_name(),
+            "model_params":self.model.get_params(),
+            "eval_prompt": None,
+        }
         df.to_csv(output_csv_path, index=False)
         logger.info("✅ String-based evaluation complete. Saved to %s", output_csv_path)
         return meta, df

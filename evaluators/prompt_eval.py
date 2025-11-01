@@ -19,7 +19,7 @@ class PromptBasedEvaluator(BaseEvaluator):
         df: pd.DataFrame,
         output_json_path: str,
     ) -> dict[str, Any]:
-        """Compute mean, std, and percentiles for LLM-based numeric scores."""
+        """Compute mean for LLM-based numeric scores."""
         if df.empty:
             raise EvaluationError("Empty dataframe passed to PromptBasedEvaluator.")
 
@@ -28,18 +28,11 @@ class PromptBasedEvaluator(BaseEvaluator):
 
         s = pd.to_numeric(df["score"], errors="coerce").dropna()
         if len(s) == 0:
-            stats = {"count": 0, "average_score": 0.0, "std_score": 0.0,
-                     "percentiles": {"p25": 0.0, "p50": 0.0, "p75": 0.0}}
+            stats = {"count": 0, "average_score": 0.0}
         else:
             stats = {
                 "count": int(len(s)),
-                "average_score": round(float(s.mean()), 6),
-                "std_score": round(float(s.std(ddof=0)), 6),
-                "percentiles": {
-                    "p25": round(float(s.quantile(0.25)), 6),
-                    "p50": round(float(s.quantile(0.5)), 6),
-                    "p75": round(float(s.quantile(0.75)), 6),
-                },
+                "average_score": round(float(s.mean()), 6)
             }
 
         result = {"metadata": meta, "out": stats}

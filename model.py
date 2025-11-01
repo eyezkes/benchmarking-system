@@ -35,7 +35,7 @@ class Model:
         self.client = OpenAI(api_key=api_key)
         self.params = params or {}
 
-    def name(self) -> str:
+    def get_name(self) -> str:
 
         return self.model_name
     

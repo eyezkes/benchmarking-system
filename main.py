@@ -8,30 +8,33 @@ from logging_conf import setup_logging
 from task import *
 from evaluators import *
 
-def run_evaluation(task:Task,judge_model,meta,df):
+def run_evaluation(task:Task,model,judge_model=None):
+    runner=Runner(model)
+    meta,df=runner.run(task)
+    run_id=meta["run_id"]
     if (task.type==TaskType.MULTIPLE_CHOICE):
         judge=MultipleChoiceJudge()
-        filename=f"judge_{task.id}.csv"        
-        meta,df= judge.check_answers(meta,df,task.get_path(filename))
+        filename=f"judge_{run_id}.csv"        
+        meta,df= judge.check_answers(meta,df,runner.get_path(filename))
         eval=MultipleChoiceEvaluator()
-        filename=f"eval_{task.id}.json"
-        out=eval.compute(meta,df,task.get_path(filename))
+        filename=f"eval_{run_id}.json"
+        out=eval.compute(meta,df,runner.get_path(filename))
         return out
     if (task.type==TaskType.STRING_BASED):
         judge=StringBasedJudge(judge_model)
-        filename=f"judge_{task.id}.csv"        
-        meta,df= judge.check_answers(meta,df,task.get_path(filename))
+        filename=f"judge_{run_id}.csv"        
+        meta,df= judge.check_answers(meta,df,runner.get_path(filename))
         eval=StringBasedEvaluator()
-        filename=f"eval_{task.id}.json"
-        out=eval.compute(meta,df,task.get_path(filename))
+        filename=f"eval_{run_id}.json"
+        out=eval.compute(meta,df,runner.get_path(filename))
         return out
     if (task.type==TaskType.PROMPT_BASED):
         judge=PromptBasedJudge(judge_model)
-        filename=f"judge_{task.id}.csv"        
-        meta,df=judge.check_answers(meta,df,task.get_path(filename),task.system_prompt)
+        filename=f"judge_{run_id}.csv"        
+        meta,df=judge.check_answers(meta,df,runner.get_path(filename),task.eval_prompt)
         eval=PromptBasedEvaluator()
-        filename=f"eval_{task.id}.json"  
-        out=eval.compute(meta,df,task.get_path(filename))
+        filename=f"eval_{run_id}.json"  
+        out=eval.compute(meta,df,runner.get_path(filename))
         return out
 
 
@@ -41,7 +44,7 @@ def run_evaluation(task:Task,judge_model,meta,df):
 
 def main():
 
-    print("hi")
+    setup_logging()
 
 if __name__ == "__main__":
     main()
