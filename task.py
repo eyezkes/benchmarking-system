@@ -37,7 +37,7 @@ class Task:
         created_at: _dt.datetime,
         dataset_path: str | Path,
         sample_size: int,
-        eval_prompt:str,
+        eval_prompt: str|None=None,
         seed: int = 42,
         system_prompt: str | None = None,
     ) -> None:
@@ -78,7 +78,7 @@ class Task:
         task_type: TaskType,
         dataset_path: str | Path,
         sample_size: int,
-        eval_prompt: str,
+        eval_prompt: str | None = None,
         system_prompt: str | None = None,
         seed: int = 42,
 

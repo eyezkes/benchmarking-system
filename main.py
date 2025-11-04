@@ -43,8 +43,7 @@ def run_evaluation(task:Task,model,judge_model=None):
 
 
 def main():
-
-    setup_logging()
+    print("hi")
 
 if __name__ == "__main__":
     main()
