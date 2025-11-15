@@ -11,13 +11,13 @@ from errors import EvaluationError
 logger = logging.getLogger(__name__)
 
 
-class MultipleChoiceJudge(BaseJudge):
+class Equals(BaseJudge):
     """Judge that compares letter answers for multiple-choice benchmarks."""
 
     def check_single_answer(self, model_answer: str, true_answer: str) -> int:
         """Return 1 if letters match (case-insensitive), else 0."""
         if true_answer is None:
-            raise EvaluationError("true_answer cannot be None for MultipleChoiceJudge.")
+            raise EvaluationError("true_answer cannot be None for Equals.")
 
         model_letter = str(model_answer).strip().upper()
         true_letter = str(true_answer).strip().upper()
@@ -32,7 +32,6 @@ class MultipleChoiceJudge(BaseJudge):
         df: pd.DataFrame,
         output_csv_path: str,
     ) -> tuple[dict[str, Any], pd.DataFrame]:
-        """Evaluate all answers for a multiple-choice dataset."""
         required_cols = ["model_answer", "true_answer"]
         validate_required_columns(df, required_cols)
 
@@ -42,12 +41,14 @@ class MultipleChoiceJudge(BaseJudge):
         )
 
         meta["judge"] = {
+            "type":"Equals",
             "judge_model": None,
             "model_params":None,
             "eval_prompt": None,
+            "invalid_count": 0
         }
 
 
         df.to_csv(output_csv_path, index=False)
-        logger.info("✅ MC evaluation complete. Results saved to %s", output_csv_path)
+        logger.info("✅ Equals check complete. Results saved to %s", output_csv_path)
         return meta, df

@@ -27,6 +27,6 @@ outputs/
 # --- Jupyter ---
 .ipynb_checkpoints/
 
-# --- Misc ---
-*.bak
-*.old
+
+.env
+*.env

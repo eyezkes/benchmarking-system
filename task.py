@@ -27,7 +27,8 @@ class Task:
         dataset_path: Path to the dataset file.
         sample_size: Number of samples to take from dataset.
         seed: Random seed (default 42).
-        system_prompt: (Optional) custom system prompt for PromptBased tasks.
+        prompt_template: Optional user-instruction part appended to the question
+                         (and options for MCQ) in the user prompt.
     """
 
     def __init__(
@@ -37,9 +38,8 @@ class Task:
         created_at: _dt.datetime,
         dataset_path: str | Path,
         sample_size: int,
-        eval_prompt: str|None=None,
+        prompt_template: str | None = None,
         seed: int = 42,
-        system_prompt: str | None = None,
     ) -> None:
         if not id or not isinstance(id, str):
             raise ValueError("Task.id must be a non-empty string")
@@ -59,29 +59,39 @@ class Task:
         self.created_at = created_at
         self.dataset_path = str(dataset_path)
         self.sample_size = sample_size
-        self.eval_prompt=eval_prompt
+        self.prompt_template = prompt_template
         self.seed = seed
-        self.system_prompt = system_prompt
 
         logger.info(
-            "Created Task(id=%s, type=%s, dataset=%s, sample=%d, seed=%d, prompt=%s)",
+            "Created Task(id=%s, type=%s, dataset=%s, sample=%d)",
             self.id,
             self.type,
             self.dataset_path,
             self.sample_size,
-            self.seed,
-            bool(system_prompt),
         )
+
+    @staticmethod
+    def _default_prompt_template(task_type: TaskType) -> str:
+        """
+        Default user-instruction snippet for each task type.
+        This text is appended after question/options in the Runner.
+        """
+        if task_type == TaskType.MULTIPLE_CHOICE:
+            return "Answer only with a single option letter (A, B, C, ...)."
+        if task_type == TaskType.STRING_BASED:
+            return "Answer clearly in a few sentences."
+        if task_type == TaskType.PROMPT_BASED:
+            # Daha serbest kullanım için boş veya çok kısa bırakılabilir.
+            return ""
+        raise ValueError(f"Unknown TaskType: {task_type}")
 
     @staticmethod
     def new(
         task_type: TaskType,
         dataset_path: str | Path,
         sample_size: int,
-        eval_prompt: str | None = None,
-        system_prompt: str | None = None,
+        prompt_template: str | None = None,
         seed: int = 42,
-
     ) -> "Task":
         """Create a new Task with timestamp-based id and given dataset/specs."""
         if not isinstance(task_type, TaskType):
@@ -92,13 +102,15 @@ class Task:
         short_uuid = uuid.uuid4().hex[:8]
         task_id = f"{timestamp}-{short_uuid}"
 
+        if prompt_template is None:
+            prompt_template = Task._default_prompt_template(task_type)
+
         return Task(
             id=task_id,
             type=task_type,
             created_at=created,
             dataset_path=dataset_path,
             sample_size=sample_size,
-            eval_prompt=eval_prompt,
-            system_prompt=system_prompt,
-            seed=seed
+            prompt_template=prompt_template,
+            seed=seed,
         )

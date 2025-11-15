@@ -19,16 +19,14 @@ logger = logging.getLogger(__name__)
 
 class Runner:
 
-
     def __init__(self, model: Any) -> None:
         if not hasattr(model, "generate"):
-            raise ValueError("model must provide a .generate(prompt, system_content) method")
+            raise ValueError("model must provide a .generate(prompt) method")
         self.model = model
         self._current_run_id: str | None = None
         self._current_run_dir: Path | None = None
 
     # ---------- helpers ----------
-
 
     @staticmethod
     def _default_system_prompt() -> str:
@@ -37,14 +35,6 @@ class Runner:
             "Answer questions accurately, clearly, and concisely.\n"
             "Avoid unnecessary explanations or reasoning unless explicitly requested."
         )
-
-    def _resolve_system_prompt(self, task: Task) -> str:
-        if task.type == TaskType.PROMPT_BASED and task.system_prompt:
-            s = task.system_prompt.strip()
-            if not s:
-                raise EvaluationError("task.system_prompt cannot be empty/whitespace.")
-            return s
-        return self._default_system_prompt()
 
     @staticmethod
     def _new_run_id() -> str:
@@ -67,6 +57,7 @@ class Runner:
         return out
 
     # ---------- main ----------
+
     def run(self, task: Task, measure_k: int = 5) -> tuple[dict, pd.DataFrame]:
         if not isinstance(task, Task):
             raise ValueError("task must be a Task")
@@ -95,7 +86,6 @@ class Runner:
         measure_idx = set(rng.sample(range(n), k)) if k > 0 else set()
         times_ms: list[float] = []
 
-        system_content = self._resolve_system_prompt(task)
         rows: list[dict] = []
 
         # ---- inference
@@ -105,29 +95,42 @@ class Runner:
 
             question = row["question"]
             ttype = task.type
+
+            # Task.prompt_template yalnızca yönerge/snippet, soru/options burada kurulur
+            instruction = task.prompt_template or ""
+
             if ttype == TaskType.MULTIPLE_CHOICE:
                 opts = row.get("options")
                 if opts is None:
                     raise EvaluationError("MULTIPLE_CHOICE row missing 'options'")
+
                 prompt = f"{question}\nOptions:\n"
                 for j, opt in enumerate(opts):
                     prompt += f"{chr(65 + j)}) {opt}\n"
-                prompt += "\nAnswer only with a single letter (A, B, C, or D)."
+                if instruction:
+                    prompt += "\n" + instruction
+
             elif ttype == TaskType.STRING_BASED:
-                prompt = f"{question}\nAnswer clearly in a few sentences."
+                prompt = f"{question}\n"
+                if instruction:
+                    prompt += instruction
+
             elif ttype == TaskType.PROMPT_BASED:
                 prompt = f"{question}\n"
+                if instruction:
+                    prompt += instruction
+
             else:
                 raise EvaluationError(f"Unknown task type: {ttype}")
 
             try:
                 if i in measure_idx:
                     t0 = time.perf_counter()
-                    ans = self.model.generate(prompt, system_content)
+                    ans = self.model.generate(prompt)
                     t1 = time.perf_counter()
                     times_ms.append((t1 - t0) * 1000.0)
                 else:
-                    ans = self.model.generate(prompt, system_content)
+                    ans = self.model.generate(prompt)
             except Exception as exc:
                 logger.error("Model generation failed at row %d: %s", i, exc)
                 raise ModelError(f"Generation failed at row {i}: {exc}") from exc
@@ -156,26 +159,27 @@ class Runner:
         avg_ms = (sum(times_ms) / len(times_ms)) if times_ms else None
 
         meta = {
-    "run_id": run_id,
-    "task_id": task.id,
-    "task_type": task.type,
-    "created_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
+            "run_id": run_id,
+            "task_id": task.id,
+            "task_type": task.type,
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
 
-    # --- task/dataset specs ---
-    "dataset_path": str(task.dataset_path),
-    "dataset_name": Path(task.dataset_path).name,
-    "sample_size": task.sample_size,
-    "seed": task.seed,
-    "system_prompt": task.system_prompt if task.type == TaskType.PROMPT_BASED else None,
+            # --- task/dataset specs ---
+            "dataset_path": str(task.dataset_path),
+            "dataset_name": Path(task.dataset_path).name,
+            "sample_size": task.sample_size,
+            "seed": task.seed,
+            "system_prompt": self.model.get_system_prompt(),
+            "user prompt":task.prompt_template,  
 
-    # --- model info ---
-    "model_name": self.model.get_name(),
-    "model_params": self.model.get_params(),
+            # --- model info ---
+            "model_name": self.model.get_name(),
+            "model_params": self.model.get_params(),
 
-    # --- latency summary ---
-    "measured_count": len(times_ms),
-    "latency_ms_avg": round(avg_ms, 2) if avg_ms is not None else None,
-}
+            # --- latency summary ---
+            "measured_count": len(times_ms),
+            "latency_ms_avg": round(avg_ms, 2) if avg_ms is not None else None,
+        }
 
         logger.info("Run finished: run_id=%s avg_ms=%s", run_id, meta["latency_ms_avg"])
         return meta, results_df

@@ -1,11 +1,13 @@
 from .base import BaseJudge
-from .mc_judge import MultipleChoiceJudge
-from .string_judge import StringBasedJudge
-from .prompt_judge import PromptBasedJudge
+from .contains import Contains
+from .equals import Equals
+from .prompt_based_bool import PromptBasedBoolean
+from .prompt_based_score import PromptBasedScore
 
 __all__ = [
     "BaseJudge",
-    "MultipleChoiceJudge",
-    "StringBasedJudge",
-    "PromptBasedJudge",
+    "Contains",
+    "Equals",
+    "PromptBasedBoolean",
+    "PromptBasedScore"
 ]
