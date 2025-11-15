@@ -24,7 +24,7 @@ def _normalize_text(s: str) -> str:
 
 
 class Contains(BaseJudge):
-    """Judge that checks if the true answer appears in the model's answer (for string-based tasks)."""
+    """Judge that checks if the true answer appears in the model's answer (for with_true_answer type tasks)."""
 
     def check_single_answer(
         self,

@@ -58,7 +58,7 @@ class Runner:
 
     # ---------- main ----------
 
-    def run(self, task: Task, measure_k: int = 5) -> tuple[dict, pd.DataFrame]:
+    def run(self, task: Task, measure_k: int = 25) -> tuple[dict, pd.DataFrame]:
         if not isinstance(task, Task):
             raise ValueError("task must be a Task")
         if task.sample_size <= 0:
@@ -110,12 +110,12 @@ class Runner:
                 if instruction:
                     prompt += "\n" + instruction
 
-            elif ttype == TaskType.STRING_BASED:
+            elif ttype == TaskType.WITH_TRUE_ANSWER:
                 prompt = f"{question}\n"
                 if instruction:
                     prompt += instruction
 
-            elif ttype == TaskType.PROMPT_BASED:
+            elif ttype == TaskType.NO_TRUE_ANSWER:
                 prompt = f"{question}\n"
                 if instruction:
                     prompt += instruction

@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 class TaskType(StrEnum):
     """Enumeration for supported benchmark task types."""
     MULTIPLE_CHOICE = "multiple_choice"
-    STRING_BASED    = "string_based"
-    PROMPT_BASED    = "prompt_based"
+    WITH_TRUE_ANSWER    = "with_true_answer"
+    NO_TRUE_ANSWER    = "no_true_answer"
 
 
 class Task:
@@ -78,9 +78,9 @@ class Task:
         """
         if task_type == TaskType.MULTIPLE_CHOICE:
             return "Answer only with a single option letter (A, B, C, ...)."
-        if task_type == TaskType.STRING_BASED:
+        if task_type == TaskType.WITH_TRUE_ANSWER:
             return "Answer clearly in a few sentences."
-        if task_type == TaskType.PROMPT_BASED:
+        if task_type == TaskType.NO_TRUE_ANSWER:
             # Daha serbest kullanım için boş veya çok kısa bırakılabilir.
             return ""
         raise ValueError(f"Unknown TaskType: {task_type}")

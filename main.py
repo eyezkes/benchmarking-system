@@ -85,7 +85,7 @@ def main():
     model_high = Model(model_name="gpt-5-nano", api_key=api_key,system_prompt="Answer questions as a judge", params={"reasoning_effort": "high" })
     model_minimal=Model(model_name="gpt-5-nano", api_key=api_key,system_prompt="Pretend as a crazy man",params={"reasoning_effort": "minimal" })
     model_judge=Model(model_name="gpt-4.1",api_key=api_key)
-    task1=Task.new(TaskType.STRING_BASED,"contains_test.csv",10,prompt_template="Answer questions with waffling")
+    task1=Task.new(TaskType.WITH_TRUE_ANSWER,"contains_test.csv",10,prompt_template="Answer questions with waffling")
 
     judge=Contains()
     judge2=PromptBasedBoolean(model_judge,eval_prompt="Is model answer contains the true answer? Be strict it is important only accept if it contains the same answer like it written(lower upper case OK). Even if they meant same thing dont accept")
